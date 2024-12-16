@@ -12,26 +12,6 @@ router = Router()
 dp.include_router(router)
 
 
-@dp.message(CommandStart())
-async def welcome_message(message: Message, state: FSMContext):
-    user = await db_manager.get_record(User, id=message.from_user.id)
-    await state.clear()
-
-    if not user:
-        new_user = User(id=message.from_user.id, username=message.from_user.username)
-        await db_manager.add_record(new_user)
-        await state.set_state(states.NAME_EXPECTING_STATE)
-
-        await message.answer(
-            consts.NAME_REQUEST
-        )
-
-    else:
-        await message.answer(
-            consts.ALREADY_REGISTERED
-        )
-
-
 @router.message(states.NAME_EXPECTING_STATE)
 async def handle_message(message: Message, state: FSMContext):
     await db_manager.update_record(message.from_user.id, name=message.text)
@@ -63,3 +43,23 @@ async def handle_message(message: Message, state: FSMContext):
     )
 
     await state.clear()
+
+
+@dp.message(CommandStart())
+async def welcome_message(message: Message, state: FSMContext):
+    user = await db_manager.get_record(User, id=message.from_user.id)
+
+    if not user:
+        new_user = User(id=message.from_user.id, username=message.from_user.username)
+        await db_manager.add_record(new_user)
+        await state.set_state(states.NAME_EXPECTING_STATE)
+
+        await message.answer(
+            consts.NAME_REQUEST
+        )
+        return
+
+    if not await state.get_state():
+        await message.answer(
+            consts.ALREADY_REGISTERED
+        )
